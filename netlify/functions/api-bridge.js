@@ -1,11 +1,15 @@
 exports.handler = async (event) => {
-    if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
+    // Only allow POST requests
+    if (event.httpMethod !== "POST") {
+        return { statusCode: 405, body: "Method Not Allowed" };
+    }
 
     try {
         const { type, city, prompt } = JSON.parse(event.body);
         const GEMINI_KEY = process.env.GEMINI_API_KEY;
         const WEATHER_KEY = process.env.WEATHER_API_KEY;
 
+        // Weather Call (Working)
         if (type === 'weather') {
             const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${WEATHER_KEY}`;
             const response = await fetch(url);
@@ -13,6 +17,7 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify(data) };
         } 
 
+        // AI Call (Fixing this)
         if (type === 'ai') {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
             const response = await fetch(url, {
@@ -21,6 +26,10 @@ exports.handler = async (event) => {
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
             const data = await response.json();
+            
+            // Log to Netlify if there is an API error
+            if (data.error) throw new Error(data.error.message);
+
             return { statusCode: 200, body: JSON.stringify(data) };
         }
     } catch (error) {
