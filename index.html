@@ -96,30 +96,40 @@
         });
 
        async function askGemini() {
-    // ... existing input and context logic ...
+    const input = document.getElementById('aiIn');
+    const text = input.value.trim();
+    if(!text) return;
+
+    addMsg(text, 'user');
+    input.value = '';
+    input.disabled = true;
 
     try {
+        let context = "You are a weather assistant.";
+        if(weatherData) {
+            context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
+        }
+        const prompt = `${context} User asks: "${text}". Keep it short.`;
+
         const res = await fetch('/.netlify/functions/api-bridge', {
             method: 'POST',
             body: JSON.stringify({ type: 'ai', prompt: prompt })
         });
         const data = await res.json();
         
-        // --- THE FIX ---
-        // We must drill down into the object to find the text string
+        // --- FIX: Correct way to extract Gemini text ---
         if (data.candidates && data.candidates[0].content) {
             const aiText = data.candidates[0].content.parts[0].text;
             addMsg(aiText, 'ai');
             if(voiceOn) speak(aiText);
-        } else if (data.error) {
-            // If the bridge sends back an error message string
-            addMsg(`❌ AI Error: ${data.error.message || data.error}`, 'ai');
         } else {
-            addMsg("🤖 I received data but couldn't read the text. Check console.", "ai");
-            console.log("Raw API Response:", data);
+            console.error("Gemini raw response:", data);
+            addMsg("🤖 AI response was malformed. Check browser console.", "ai");
         }
     } catch (err) {
-        addMsg("❌ Connection Error.", "ai");
+        addMsg("❌ API Bridge Error. Ensure your keys are active.", "ai");
+    } finally {
+        input.disabled = false;
     }
 }
 
@@ -219,4 +229,5 @@
 </body>
 
 </html>
+
 
