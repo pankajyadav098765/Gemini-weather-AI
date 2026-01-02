@@ -1,5 +1,4 @@
 exports.handler = async (event) => {
-    // Only allow POST requests
     if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
 
     try {
@@ -7,7 +6,6 @@ exports.handler = async (event) => {
         const GEMINI_KEY = process.env.GEMINI_API_KEY;
         const WEATHER_KEY = process.env.WEATHER_API_KEY;
 
-        // 1. Weather Logic (Already Working)
         if (type === 'weather') {
             const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${WEATHER_KEY}`;
             const response = await fetch(url);
@@ -15,9 +13,9 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify(data) };
         } 
 
-        // 2. AI Logic (The Fix)
         if (type === 'ai') {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+            // FIXED: Changed v1beta to v1
+            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -27,19 +25,10 @@ exports.handler = async (event) => {
                     }]
                 })
             });
-
             const data = await response.json();
-            
-            // If Gemini returns an error, pass it to the frontend for visibility
-            if (data.error) {
-                return { 
-                    statusCode: 200, 
-                    body: JSON.stringify({ error: data.error.message }) 
-                };
-            }
-
             return { 
                 statusCode: 200, 
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data) 
             };
         }
