@@ -117,35 +117,40 @@
 
         // 2. SECURE AI CALL
         async function askGemini() {
-            const input = document.getElementById('aiIn');
-            const text = input.value.trim();
-            if(!text) return;
+    const input = document.getElementById('aiIn');
+    const text = input.value.trim();
+    if(!text) return;
 
-            addMsg(text, 'user');
-            input.value = '';
-            input.disabled = true;
+    addMsg(text, 'user');
+    input.value = '';
 
-            try {
-                let context = "You are a weather assistant.";
-                if(weatherData) {
-                    context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
-                }
-                const prompt = `${context} User asks: "${text}". Keep it short.`;
-
-                const res = await fetch('/.netlify/functions/api-bridge', {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'ai', prompt: prompt })
-                });
-                const data = await res.json();
-                const aiText = data.candidates[0].content.parts[0].text;
-                addMsg(aiText, 'ai');
-                if(voiceOn) speak(aiText);
-            } catch (err) {
-                addMsg("❌ API Bridge Error. Set your keys in Netlify.", "ai");
-            } finally {
-                input.disabled = false;
-            }
+    try {
+        let context = "You are a weather assistant.";
+        if(weatherData) {
+            context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
         }
+        const prompt = `${context} User asks: "${text}". Keep it short.`;
+
+        const res = await fetch('/.netlify/functions/api-bridge', {
+            method: 'POST',
+            body: JSON.stringify({ type: 'ai', prompt: prompt })
+        });
+        const data = await res.json();
+        
+        // Detailed error check
+        if (data.error) {
+            addMsg(`❌ AI Error: ${data.error}`, 'ai');
+        } else if (data.candidates && data.candidates[0].content) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            addMsg(aiText, 'ai');
+            if(voiceOn) speak(aiText);
+        } else {
+            addMsg("❌ AI format error. Check Function logs.", 'ai');
+        }
+    } catch (err) {
+        addMsg("❌ Network error. Bridge function failed.", "ai");
+    }
+}
 
         function updateUI(data) {
             document.getElementById('w-temp').innerText = Math.round(data.main.temp) + "°";
@@ -204,4 +209,5 @@
         window.onload = getWeather;
     </script>
 </body>
+
 </html>
