@@ -14,8 +14,8 @@ exports.handler = async (event) => {
         } 
 
         if (type === 'ai') {
-            // GOING BACK TO v1beta BECAUSE v1 FAILED IN YOUR LOGS
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+            // FIXED: Changed v1beta to v1 stable for gemini-1.5-flash
+            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
