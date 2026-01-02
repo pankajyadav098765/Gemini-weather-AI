@@ -7,7 +7,7 @@ exports.handler = async (event) => {
         const GEMINI_KEY = process.env.GEMINI_API_KEY;
         const WEATHER_KEY = process.env.WEATHER_API_KEY;
 
-        // 1. Weather Logic (Already working)
+        // 1. Weather Logic (Already Working)
         if (type === 'weather') {
             const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${WEATHER_KEY}`;
             const response = await fetch(url);
@@ -15,32 +15,33 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify(data) };
         } 
 
-        // 2. AI Logic (The bug fix)
+        // 2. AI Logic (The Fix)
         if (type === 'ai') {
-            // Use v1beta for Gemini 1.5 Flash
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
-            
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    contents: [{ 
-                        parts: [{ text: prompt }] 
-                    }] 
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
                 })
             });
 
             const data = await response.json();
-
-            // If Gemini returns an error, pass it back to the UI for debugging
+            
+            // If Gemini returns an error, pass it to the frontend for visibility
             if (data.error) {
                 return { 
-                    statusCode: data.error.code || 400, 
+                    statusCode: 200, 
                     body: JSON.stringify({ error: data.error.message }) 
                 };
             }
 
-            return { statusCode: 200, body: JSON.stringify(data) };
+            return { 
+                statusCode: 200, 
+                body: JSON.stringify(data) 
+            };
         }
     } catch (error) {
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
