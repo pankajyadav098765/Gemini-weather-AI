@@ -3,31 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Weather - Secure Edition</title>
+    <title>Gemini Weather - Final Fix</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* --- DESIGN STYLES --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            background: #74b9ff; 
-            transition: background 1s ease;
-        }
+        body { font-family: 'Inter', sans-serif; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #74b9ff; transition: background 1s ease; }
         body.sunny { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
         body.rainy { background: linear-gradient(135deg, #373B44 0%, #4286f4 100%); }
         body.cloudy { background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%); }
-
         .app-container { display: flex; gap: 20px; width: 900px; height: 85vh; max-width: 95%; z-index: 10; }
-        .card {
-            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px);
-            border-radius: 24px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-            flex: 1; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.6);
-        }
+        .card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-radius: 24px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); flex: 1; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.6); }
         .search-row { display: flex; gap: 10px; margin-bottom: 20px; }
         input { flex: 1; padding: 15px; border: 2px solid #e0e0e0; border-radius: 15px; outline: none; font-size: 1rem; }
         button { padding: 0 25px; border: none; background: #6C5CE7; color: white; border-radius: 15px; cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
@@ -43,13 +28,10 @@
         .rain-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; display: none; }
         .drop { position: absolute; background: rgba(255,255,255,0.6); width: 2px; height: 15px; top: -20px; animation: fall linear infinite; }
         @keyframes fall { to { transform: translateY(100vh); } }
-        @media (max-width: 768px) { .app-container { flex-direction: column; height: auto; } }
     </style>
 </head>
 <body id="main-body">
-
     <div id="rain-box" class="rain-layer"></div>
-
     <div class="app-container">
         <div class="card">
             <div class="search-row">
@@ -67,15 +49,9 @@
                 </div>
             </div>
         </div>
-
         <div class="card">
-            <div class="chat-header">
-                <h3>✨ Gemini Assistant</h3>
-                <span id="voiceBtn" style="cursor:pointer; color:#6C5CE7; font-weight:bold;">🔊 Voice On</span>
-            </div>
-            <div class="chat-area" id="chat-box">
-                <div class="msg ai">Hello! I'm your secure weather guide.</div>
-            </div>
+            <div class="chat-header"><h3>✨ Gemini Assistant</h3></div>
+            <div class="chat-area" id="chat-box"><div class="msg ai">Hello! I'm your secure weather guide.</div></div>
             <div class="search-row" style="margin-bottom: 0;">
                 <input type="text" id="aiIn" placeholder="Ask about the weather...">
                 <button id="askBtn">➤</button>
@@ -85,20 +61,12 @@
 
     <script>
         let weatherData = null;
-        let voiceOn = true;
-
         document.getElementById('searchBtn').addEventListener('click', getWeather);
         document.getElementById('askBtn').addEventListener('click', askGemini);
-        document.getElementById('voiceBtn').addEventListener('click', () => {
-            voiceOn = !voiceOn;
-            document.getElementById('voiceBtn').innerText = voiceOn ? "🔊 Voice On" : "🔇 Voice Off";
-        });
 
         async function getWeather() {
             const city = document.getElementById('cityIn').value;
             if(!city) return;
-            document.getElementById('w-city').innerText = "Loading...";
-
             try {
                 const res = await fetch('/.netlify/functions/api-bridge', {
                     method: 'POST',
@@ -108,49 +76,35 @@
                 if (data.cod !== 200) throw new Error("Not found");
                 weatherData = data;
                 updateUI(data);
-            } catch (err) {
-                document.getElementById('w-city').innerText = "City Not Found";
-            }
+            } catch (err) { document.getElementById('w-city').innerText = "City Not Found"; }
         }
 
         async function askGemini() {
             const input = document.getElementById('aiIn');
             const text = input.value.trim();
             if(!text) return;
-
             addMsg(text, 'user');
             input.value = '';
-            input.disabled = true;
 
             try {
                 let context = "You are a weather assistant.";
-                if(weatherData) {
-                    context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
-                }
-                const prompt = `${context} User asks: "${text}". Keep it short.`;
-
+                if(weatherData) context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
+                
                 const res = await fetch('/.netlify/functions/api-bridge', {
                     method: 'POST',
-                    body: JSON.stringify({ type: 'ai', prompt: prompt })
+                    body: JSON.stringify({ type: 'ai', prompt: `${context} User asks: "${text}". Keep it short.` })
                 });
-                
                 const data = await res.json();
 
-                // FIX: Correctly extract the text string from the Gemini JSON response
+                // FIX: DRAINING THE JSON CORRECTLY
                 if (data.candidates && data.candidates[0].content) {
-                    const aiText = data.candidates[0].content.parts[0].text;
-                    addMsg(aiText, 'ai');
-                    if(voiceOn) speak(aiText);
+                    addMsg(data.candidates[0].content.parts[0].text, 'ai');
                 } else if (data.error) {
-                    addMsg("❌ AI Error: " + (data.error.message || data.error), "ai");
+                    addMsg("❌ AI Error: " + (data.error.message || "Unknown error"), "ai");
                 } else {
-                    addMsg("🤖 AI received data but couldn't read the text.", "ai");
+                    addMsg("🤖 Technical error. Check Netlify logs.", "ai");
                 }
-            } catch (err) {
-                addMsg("❌ Connection Error. Check your Netlify folder structure.", "ai");
-            } finally {
-                input.disabled = false;
-            }
+            } catch (err) { addMsg("❌ Connection Error.", "ai"); }
         }
 
         function updateUI(data) {
@@ -159,38 +113,12 @@
             document.getElementById('w-desc').innerText = data.weather[0].description;
             document.getElementById('w-humidity').innerText = data.main.humidity + "%";
             document.getElementById('w-wind').innerText = data.wind.speed + " m/s";
-
             const main = data.weather[0].main.toLowerCase();
             const body = document.getElementById('main-body');
-            const rainBox = document.getElementById('rain-box');
-            
             body.className = '';
-            rainBox.style.display = 'none';
-            rainBox.innerHTML = '';
-
-            if(main.includes('rain') || main.includes('drizzle')) {
-                body.classList.add('rainy');
-                rainBox.style.display = 'block';
-                makeRain();
-                document.getElementById('w-icon').innerText = "🌧️";
-            } else if(main.includes('clear')) {
-                body.classList.add('sunny');
-                document.getElementById('w-icon').innerText = "☀️";
-            } else {
-                body.classList.add('cloudy');
-                document.getElementById('w-icon').innerText = "☁️";
-            }
-        }
-
-        function makeRain() {
-            const box = document.getElementById('rain-box');
-            for(let i=0; i<50; i++) {
-                const d = document.createElement('div');
-                d.className = 'drop';
-                d.style.left = Math.random() * 100 + 'vw';
-                d.style.animationDuration = (Math.random() * 0.5 + 0.5) + 's';
-                box.appendChild(d);
-            }
+            if(main.includes('rain')) { body.classList.add('rainy'); document.getElementById('w-icon').innerText = "🌧️"; }
+            else if(main.includes('clear')) { body.classList.add('sunny'); document.getElementById('w-icon').innerText = "☀️"; }
+            else { body.classList.add('cloudy'); document.getElementById('w-icon').innerText = "☁️"; }
         }
 
         function addMsg(txt, type) {
@@ -201,12 +129,6 @@
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }
-
-        function speak(txt) {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(txt));
-        }
-
         window.onload = getWeather;
     </script>
 </body>
