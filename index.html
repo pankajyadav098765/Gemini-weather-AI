@@ -102,7 +102,6 @@
 
     addMsg(text, 'user');
     input.value = '';
-    input.disabled = true;
 
     try {
         let context = "You are a weather assistant.";
@@ -117,19 +116,12 @@
         });
         const data = await res.json();
         
-        // --- FIX: Correct way to extract Gemini text ---
-        if (data.candidates && data.candidates[0].content) {
-            const aiText = data.candidates[0].content.parts[0].text;
-            addMsg(aiText, 'ai');
-            if(voiceOn) speak(aiText);
-        } else {
-            console.error("Gemini raw response:", data);
-            addMsg("🤖 AI response was malformed. Check browser console.", "ai");
-        }
+        // This line fixes the [object Object] error
+        const aiText = data.candidates[0].content.parts[0].text;
+        addMsg(aiText, 'ai');
+        if(voiceOn) speak(aiText);
     } catch (err) {
-        addMsg("❌ API Bridge Error. Ensure your keys are active.", "ai");
-    } finally {
-        input.disabled = false;
+        addMsg("❌ Connection Error. Check your folder structure on GitHub.", "ai");
     }
 }
 
@@ -229,5 +221,6 @@
 </body>
 
 </html>
+
 
 
