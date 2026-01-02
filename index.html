@@ -95,25 +95,33 @@
             document.getElementById('voiceBtn').innerText = voiceOn ? "🔊 Voice On" : "🔇 Voice Off";
         });
 
-        // 1. SECURE WEATHER CALL
-        async function getWeather() {
-            const city = document.getElementById('cityIn').value;
-            if(!city) return;
-            document.getElementById('w-city').innerText = "Loading...";
+       async function askGemini() {
+    // ... existing input and context logic ...
 
-            try {
-                const res = await fetch('/.netlify/functions/api-bridge', {
-                    method: 'POST',
-                    body: JSON.stringify({ type: 'weather', city: city })
-                });
-                const data = await res.json();
-                if (data.cod !== 200) throw new Error("Not found");
-                weatherData = data;
-                updateUI(data);
-            } catch (err) {
-                document.getElementById('w-city').innerText = "City Not Found";
-            }
+    try {
+        const res = await fetch('/.netlify/functions/api-bridge', {
+            method: 'POST',
+            body: JSON.stringify({ type: 'ai', prompt: prompt })
+        });
+        const data = await res.json();
+        
+        // --- THE FIX ---
+        // We must drill down into the object to find the text string
+        if (data.candidates && data.candidates[0].content) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            addMsg(aiText, 'ai');
+            if(voiceOn) speak(aiText);
+        } else if (data.error) {
+            // If the bridge sends back an error message string
+            addMsg(`❌ AI Error: ${data.error.message || data.error}`, 'ai');
+        } else {
+            addMsg("🤖 I received data but couldn't read the text. Check console.", "ai");
+            console.log("Raw API Response:", data);
         }
+    } catch (err) {
+        addMsg("❌ Connection Error.", "ai");
+    }
+}
 
         // 2. SECURE AI CALL
         async function askGemini() {
@@ -211,3 +219,4 @@
 </body>
 
 </html>
+
