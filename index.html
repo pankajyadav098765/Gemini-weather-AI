@@ -6,7 +6,7 @@
     <title>Gemini Weather - Secure Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* --- YOUR ORIGINAL BLUE RAIN DESIGN --- */
+        /* --- DESIGN STYLES --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', sans-serif;
@@ -87,7 +87,6 @@
         let weatherData = null;
         let voiceOn = true;
 
-        // Setup UI Listeners
         document.getElementById('searchBtn').addEventListener('click', getWeather);
         document.getElementById('askBtn').addEventListener('click', askGemini);
         document.getElementById('voiceBtn').addEventListener('click', () => {
@@ -95,72 +94,64 @@
             document.getElementById('voiceBtn').innerText = voiceOn ? "🔊 Voice On" : "🔇 Voice Off";
         });
 
-       async function askGemini() {
-    const input = document.getElementById('aiIn');
-    const text = input.value.trim();
-    if(!text) return;
+        async function getWeather() {
+            const city = document.getElementById('cityIn').value;
+            if(!city) return;
+            document.getElementById('w-city').innerText = "Loading...";
 
-    addMsg(text, 'user');
-    input.value = '';
-
-    try {
-        let context = "You are a weather assistant.";
-        if(weatherData) {
-            context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
+            try {
+                const res = await fetch('/.netlify/functions/api-bridge', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'weather', city: city })
+                });
+                const data = await res.json();
+                if (data.cod !== 200) throw new Error("Not found");
+                weatherData = data;
+                updateUI(data);
+            } catch (err) {
+                document.getElementById('w-city').innerText = "City Not Found";
+            }
         }
-        const prompt = `${context} User asks: "${text}". Keep it short.`;
 
-        const res = await fetch('/.netlify/functions/api-bridge', {
-            method: 'POST',
-            body: JSON.stringify({ type: 'ai', prompt: prompt })
-        });
-        const data = await res.json();
-        
-        // This line fixes the [object Object] error
-        const aiText = data.candidates[0].content.parts[0].text;
-        addMsg(aiText, 'ai');
-        if(voiceOn) speak(aiText);
-    } catch (err) {
-        addMsg("❌ Connection Error. Check your folder structure on GitHub.", "ai");
-    }
-}
-
-        // 2. SECURE AI CALL
         async function askGemini() {
-    const input = document.getElementById('aiIn');
-    const text = input.value.trim();
-    if(!text) return;
+            const input = document.getElementById('aiIn');
+            const text = input.value.trim();
+            if(!text) return;
 
-    addMsg(text, 'user');
-    input.value = '';
+            addMsg(text, 'user');
+            input.value = '';
+            input.disabled = true;
 
-    try {
-        let context = "You are a weather assistant.";
-        if(weatherData) {
-            context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
+            try {
+                let context = "You are a weather assistant.";
+                if(weatherData) {
+                    context += ` Weather in ${weatherData.name}: ${weatherData.weather[0].main}, ${Math.round(weatherData.main.temp)}°C.`;
+                }
+                const prompt = `${context} User asks: "${text}". Keep it short.`;
+
+                const res = await fetch('/.netlify/functions/api-bridge', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: 'ai', prompt: prompt })
+                });
+                
+                const data = await res.json();
+
+                // FIX: Correctly extract the text string from the Gemini JSON response
+                if (data.candidates && data.candidates[0].content) {
+                    const aiText = data.candidates[0].content.parts[0].text;
+                    addMsg(aiText, 'ai');
+                    if(voiceOn) speak(aiText);
+                } else if (data.error) {
+                    addMsg("❌ AI Error: " + (data.error.message || data.error), "ai");
+                } else {
+                    addMsg("🤖 AI received data but couldn't read the text.", "ai");
+                }
+            } catch (err) {
+                addMsg("❌ Connection Error. Check your Netlify folder structure.", "ai");
+            } finally {
+                input.disabled = false;
+            }
         }
-        const prompt = `${context} User asks: "${text}". Keep it short.`;
-
-        const res = await fetch('/.netlify/functions/api-bridge', {
-            method: 'POST',
-            body: JSON.stringify({ type: 'ai', prompt: prompt })
-        });
-        const data = await res.json();
-        
-        // Detailed error check
-        if (data.error) {
-            addMsg(`❌ AI Error: ${data.error}`, 'ai');
-        } else if (data.candidates && data.candidates[0].content) {
-            const aiText = data.candidates[0].content.parts[0].text;
-            addMsg(aiText, 'ai');
-            if(voiceOn) speak(aiText);
-        } else {
-            addMsg("❌ AI format error. Check Function logs.", 'ai');
-        }
-    } catch (err) {
-        addMsg("❌ Network error. Bridge function failed.", "ai");
-    }
-}
 
         function updateUI(data) {
             document.getElementById('w-temp').innerText = Math.round(data.main.temp) + "°";
@@ -219,8 +210,4 @@
         window.onload = getWeather;
     </script>
 </body>
-
 </html>
-
-
-
