@@ -13,6 +13,7 @@ exports.handler = async (event) => {
         } 
 
         if (type === 'ai') {
+            // Updated to v1 stable
             const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
             const response = await fetch(url, {
                 method: 'POST',
